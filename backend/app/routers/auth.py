@@ -15,13 +15,20 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponseData,
     LogoutRequest,
+    PushSubscriptionRequest,
     RefreshRequest,
     RefreshResponseData,
     RegisterRequest,
     RegisterResponseData,
 )
 from app.schemas.recommendations import ApiEnvelope
-from app.services.auth import login_user, logout_user, refresh_tokens, register_user
+from app.services.auth import (
+    login_user,
+    logout_user,
+    refresh_tokens,
+    register_push_subscription,
+    register_user,
+)
 from app.utils.envelope import envelope
 from app.utils.redis import RedisClient, get_redis
 
@@ -79,4 +86,16 @@ async def logout(
         access_token=credentials.credentials,
         refresh_token=body.refresh_token,
     )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/push-subscription", status_code=status.HTTP_204_NO_CONTENT)
+async def push_subscription(
+    body: PushSubscriptionRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    """Register or update the authenticated user's Web Push subscription."""
+
+    await register_push_subscription(db, current_user, body)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

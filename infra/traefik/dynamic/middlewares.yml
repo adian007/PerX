@@ -1,0 +1,32 @@
+http:
+  middlewares:
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        contentSecurityPolicy: "default-src 'self'"
+        customResponseHeaders:
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+          X-Content-Type-Options: nosniff
+          X-Frame-Options: DENY
+          Referrer-Policy: strict-origin-when-cross-origin
+          Content-Security-Policy: "default-src 'self'"
+
+  routers:
+    perx-api-secure:
+      rule: PathPrefix(`/api`)
+      entryPoints:
+        - web
+      middlewares:
+        - security-headers
+      service: perx-api
+
+  services:
+    perx-api:
+      loadBalancer:
+        servers:
+          - url: http://backend:8000

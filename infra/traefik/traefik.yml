@@ -1,0 +1,24 @@
+# Traefik static configuration — TLS placeholders for production hardening.
+
+api:
+  dashboard: false
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+    # Uncomment and mount certs for production TLS:
+    # http:
+    #   tls:
+    #     certResolver: letsencrypt
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+  docker:
+    exposedByDefault: false
+
+log:
+  level: INFO

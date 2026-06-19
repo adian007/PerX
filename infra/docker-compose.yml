@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: perx_user
+      POSTGRES_PASSWORD: perx_secret
+      POSTGRES_DB: perx
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perx_user -d perx"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://perx_user:perx_secret@postgres:5432/perx
+      REDIS_URL: redis://redis:6379/0
+      RECONCILE_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.perx-api.rule=PathPrefix(`/api`)
+      - traefik.http.routers.perx-api.entrypoints=web
+      - traefik.http.services.perx-api.loadbalancer.server.port=8000
+
+  # Optional local LLM — pull model after startup: docker compose exec ollama ollama pull gemma2:2b
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["with-ollama"]
+    volumes:
+      - ollama_data:/root/.ollama
+
+  traefik:
+    image: traefik:v3.0
+    profiles: ["with-traefik"]
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  ollama_data:

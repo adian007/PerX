@@ -12,6 +12,9 @@ from app.utils.ollama import generate_or_fallback_explanation
 
 def test_recommendations_endpoint_returns_enveloped_response(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     client = TestClient(create_app())
 
     response = client.get("/api/v1/recommendations", params={"limit": 2, "demo": "cold"})
@@ -26,6 +29,8 @@ def test_recommendations_endpoint_returns_enveloped_response(monkeypatch):
 
 def test_warm_demo_endpoint_can_return_score_breakdown(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     client = TestClient(create_app())
 
     response = client.get(
@@ -41,6 +46,8 @@ def test_warm_demo_endpoint_can_return_score_breakdown(monkeypatch):
 
 def test_second_request_returns_cached_response(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     client = TestClient(create_app())
 
     first = client.get("/api/v1/recommendations", params={"demo": "warm", "limit": 3})
@@ -53,6 +60,8 @@ def test_second_request_returns_cached_response(monkeypatch):
 
 def test_recommendation_explanation_endpoint(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     client = TestClient(create_app())
 
     client.get("/api/v1/recommendations", params={"demo": "cold", "limit": 1})
@@ -66,6 +75,8 @@ def test_recommendation_explanation_endpoint(monkeypatch):
 
 def test_ollama_health_endpoint(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     client = TestClient(create_app())
 
     response = client.get("/api/v1/internal/ollama-health")
@@ -107,6 +118,8 @@ def _perks() -> list[Perk]:
 
 def test_ollama_down_recommendation_returns_with_fallback(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
 
     payload = asyncio.run(
         build_recommendation_payload(

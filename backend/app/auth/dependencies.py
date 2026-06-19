@@ -19,17 +19,18 @@ from app.services.access_control import assert_role
 from app.utils.redis import RedisClient, get_redis
 
 _bearer = HTTPBearer(auto_error=True)
+_optional_bearer = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-    redis: Annotated[RedisClient, Depends(get_redis)],
+async def _authenticate_token(
+    token: str,
+    db: AsyncSession,
+    redis: RedisClient,
 ) -> User:
-    """Extract Bearer token, decode JWT, check revocation, load active user."""
+    """Shared JWT validation used by required and optional auth dependencies."""
 
     try:
-        payload = decode_access_token(credentials.credentials)
+        payload = decode_access_token(token)
     except TokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,6 +76,28 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[RedisClient, Depends(get_redis)],
+) -> User:
+    """Extract Bearer token, decode JWT, check revocation, load active user."""
+
+    return await _authenticate_token(credentials.credentials, db, redis)
+
+
+async def get_optional_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_optional_bearer)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[RedisClient, Depends(get_redis)],
+) -> User | None:
+    """Return authenticated user when Bearer token is present, else None."""
+
+    if credentials is None:
+        return None
+    return await _authenticate_token(credentials.credentials, db, redis)
 
 
 def require_role(*roles: UserRole | str) -> Callable[..., User]:

@@ -58,6 +58,55 @@ def perk_from_row(row: dict, provider_row: dict) -> Perk:
     )
 
 
+def employee_from_orm(profile) -> EmployeeProfile:
+    """Build recommendation ``EmployeeProfile`` from SQLAlchemy model."""
+
+    mode = profile.recommender_mode
+    if mode not in ("cold_start", "warm"):
+        mode = "cold_start"
+
+    preferred = [str(category.value if hasattr(category, "value") else category) for category in (profile.preferred_categories or [])]
+
+    return EmployeeProfile(
+        id=str(profile.id),
+        first_name=profile.first_name,
+        interaction_count=int(profile.interaction_count or 0),
+        recommender_mode=mode,  # type: ignore[arg-type]
+        lifestyle_tags=list(profile.lifestyle_tags or []),
+        preferred_categories=preferred,
+        budget_sensitivity=str(profile.budget_sensitivity or "medium"),
+        wellness_priority=int(profile.wellness_priority or 5),
+        family_situation=str(profile.family_situation or "single"),
+        affinity_vector=profile.affinity_vector,
+    )
+
+
+def perk_from_orm(perk_row, provider_row=None) -> Perk:
+    """Build recommendation ``Perk`` from SQLAlchemy models."""
+
+    provider = provider_row or perk_row.provider
+    return Perk(
+        id=str(perk_row.id),
+        name=perk_row.name,
+        category=str(perk_row.category.value if hasattr(perk_row.category, "value") else perk_row.category),
+        short_description=perk_row.short_description or "",
+        image_url=perk_row.image_url,
+        employee_price_cents=int(perk_row.employee_price_cents),
+        provider=Provider(
+            id=str(provider.id),
+            company_name=provider.company_name,
+            logo_url=provider.logo_url,
+            avg_rating=float(provider.avg_rating or 0.0),
+        ),
+        tags=list(perk_row.tags or []),
+        is_active=bool(perk_row.is_active),
+        is_featured=bool(perk_row.is_featured),
+        popularity_score=float(perk_row.popularity_score or 0.5),
+        quality_score=float(perk_row.quality_score or 0.5),
+        collaborative_score=0.0,
+    )
+
+
 def ucb_counts_from_interactions(interactions: list[dict]) -> dict[str, int]:
     """Derive UCB show counts from ``perk_interactions`` rows.
 

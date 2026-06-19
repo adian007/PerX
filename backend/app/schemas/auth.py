@@ -108,3 +108,13 @@ class RegisterResponseData(BaseModel):
     user_id: str
     role: UserRole
     message: str = "Verify your email to continue."
+
+class PushSubscriptionRequest(BaseModel):
+    """Body for POST /api/v1/auth/push-subscription."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    push_endpoint: str = Field(min_length=1)
+    push_p256dh: str = Field(min_length=1)
+    push_auth: str = Field(min_length=1)
+

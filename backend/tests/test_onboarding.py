@@ -21,6 +21,8 @@ def test_complete_onboarding_service_returns_affinity():
 
 def test_onboarding_api_returns_expected_shape(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     EXPLANATION_STORE.clear()
     client = TestClient(create_app())
 
@@ -45,6 +47,8 @@ def test_onboarding_api_returns_expected_shape(monkeypatch):
 
 def test_onboarding_explanation_poll(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
+    monkeypatch.setenv("REDIS_USE_MEMORY", "true")
     EXPLANATION_STORE.clear()
     client = TestClient(create_app())
 

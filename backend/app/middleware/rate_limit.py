@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 
 from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_optional_current_user
 from app.models.user import User
 from app.utils.redis import RATE_LIMIT_LUA, RedisClient, get_redis
 
@@ -79,7 +80,7 @@ async def check_rate_limit(
 
     key, endpoint = rate_limit_key(request, user_id=user_id)
     limit = ENDPOINT_LIMITS.get(endpoint, DEFAULT_LIMIT)
-    count = await redis.eval(RATE_LIMIT_LUA, 1, key, str(RATE_LIMIT_WINDOW_SECONDS))
+    count = await redis.eval_rate_limit(key, str(RATE_LIMIT_WINDOW_SECONDS))
     if count > limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -111,3 +112,14 @@ async def enforce_user_rate_limit(
     """Rate-limit authenticated requests per user_id."""
 
     await check_rate_limit(request, redis, user_id=str(current_user.id))
+
+
+async def enforce_optional_rate_limit(
+    request: Request,
+    redis: Annotated[RedisClient, Depends(get_redis)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
+) -> None:
+    """Rate-limit by user when authenticated, otherwise by client IP."""
+
+    user_id = str(current_user.id) if current_user is not None else None
+    await check_rate_limit(request, redis, user_id=user_id)

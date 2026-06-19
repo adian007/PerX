@@ -9,6 +9,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 from app.config import get_settings
+from app.utils.budget_lua import BUDGET_DECR_LUA
 
 RATE_LIMIT_LUA = """
 local current = redis.call('INCR', KEYS[1])
@@ -23,7 +24,7 @@ class InMemoryRedis:
     """Minimal async Redis stand-in for tests and offline development."""
 
     def __init__(self) -> None:
-        self._strings: dict[str, tuple[int, float | None]] = {}
+        self._strings: dict[str, tuple[str, float | None]] = {}
         self._sets: dict[str, set[str]] = {}
         self._lock = asyncio.Lock()
 
@@ -35,30 +36,50 @@ class InMemoryRedis:
         if expires_at is not None and expires_at <= time.monotonic():
             del self._strings[key]
 
+    async def _get_raw(self, key: str) -> str | None:
+        await self._purge_expired(key)
+        entry = self._strings.get(key)
+        if entry is None:
+            return None
+        return entry[0]
+
     async def incr(self, key: str) -> int:
         async with self._lock:
-            await self._purge_expired(key)
-            current, expires_at = self._strings.get(key, (0, None))
+            raw = await self._get_raw(key)
+            current = int(raw or "0")
             current += 1
-            self._strings[key] = (current, expires_at)
+            _, expires_at = self._strings.get(key, ("0", None))
+            self._strings[key] = (str(current), expires_at)
             return current
 
     async def expire(self, key: str, seconds: int) -> bool:
         async with self._lock:
             if key not in self._strings:
                 return False
-            count, _ = self._strings[key]
-            self._strings[key] = (count, time.monotonic() + seconds)
+            value, _ = self._strings[key]
+            self._strings[key] = (value, time.monotonic() + seconds)
             return True
 
-    async def eval(self, script: str, numkeys: int, key: str, ttl_seconds: str) -> int:
+    async def eval(self, script: str, numkeys: int, key: str, *args: str) -> int:
         async with self._lock:
-            await self._purge_expired(key)
-            current, expires_at = self._strings.get(key, (0, None))
-            current += 1
+            if script.strip() == BUDGET_DECR_LUA.strip():
+                amount = int(args[0])
+                raw = await self._get_raw(key)
+                current = int(raw or "0")
+                if current < amount:
+                    return -1
+                new_value = current - amount
+                _, expires_at = self._strings.get(key, (str(current), None))
+                self._strings[key] = (str(new_value), expires_at)
+                return new_value
+
+            ttl_seconds = args[0] if args else "60"
+            raw = await self._get_raw(key)
+            current = int(raw or "0") + 1
+            expires_at = self._strings.get(key, ("0", None))[1]
             if current == 1:
                 expires_at = time.monotonic() + int(ttl_seconds)
-            self._strings[key] = (current, expires_at)
+            self._strings[key] = (str(current), expires_at)
             return current
 
     async def sadd(self, key: str, member: str) -> int:
@@ -75,17 +96,25 @@ class InMemoryRedis:
 
     async def setex(self, key: str, seconds: int, value: str) -> bool:
         async with self._lock:
-            self._strings[key] = (int(value) if value.isdigit() else 0, time.monotonic() + seconds)
+            self._strings[key] = (value, time.monotonic() + seconds)
             return True
+
+    async def set(self, key: str, value: str) -> bool:
+        async with self._lock:
+            self._strings[key] = (value, None)
+            return True
+
+    async def incrby(self, key: str, amount: int) -> int:
+        async with self._lock:
+            raw = await self._get_raw(key)
+            current = int(raw or "0") + amount
+            _, expires_at = self._strings.get(key, ("0", None))
+            self._strings[key] = (str(current), expires_at)
+            return current
 
     async def get(self, key: str) -> str | None:
         async with self._lock:
-            await self._purge_expired(key)
-            entry = self._strings.get(key)
-            if entry is None:
-                return None
-            count, _ = entry
-            return str(count)
+            return await self._get_raw(key)
 
     async def delete(self, key: str) -> int:
         async with self._lock:
@@ -114,8 +143,22 @@ class RedisClient:
     def __init__(self, backend: Any) -> None:
         self._backend = backend
 
-    async def eval(self, script: str, numkeys: int, key: str, ttl_seconds: str) -> int:
-        return int(await self._backend.eval(script, numkeys, key, ttl_seconds))
+    async def eval(self, script: str, numkeys: int, key: str, *args: str) -> int:
+        return int(await self._backend.eval(script, numkeys, key, *args))
+
+    async def eval_rate_limit(self, key: str, ttl_seconds: str) -> int:
+        return await self.eval(RATE_LIMIT_LUA, 1, key, ttl_seconds)
+
+    async def eval_budget_decr(self, key: str, amount_cents: int) -> int:
+        """Atomically decrement budget. Returns new balance, or -1 if insufficient."""
+
+        return await self.eval(BUDGET_DECR_LUA, 1, key, str(amount_cents))
+
+    async def incrby(self, key: str, amount: int) -> int:
+        return int(await self._backend.incrby(key, amount))
+
+    async def set(self, key: str, value: str) -> bool:
+        return bool(await self._backend.set(key, value))
 
     async def get(self, key: str) -> str | None:
         return await self._backend.get(key)

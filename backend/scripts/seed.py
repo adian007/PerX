@@ -123,13 +123,13 @@ async def seed() -> None:
 
         provider_a = ProviderProfile(
             user_id=provider_a_user.id,
-            company_name="FlowFit",
+            company_name="FlowFit Tirana",
             status=ProviderStatus.active,
             available_countries=["AL"],
         )
         provider_b = ProviderProfile(
             user_id=provider_b_user.id,
-            company_name="GreenBite",
+            company_name="GreenBite Albania",
             status=ProviderStatus.active,
             available_countries=["AL"],
         )
@@ -139,7 +139,7 @@ async def seed() -> None:
         perks = [
             Perk(
                 provider_id=provider_a.id,
-                name="Premium Gym Membership",
+                name="Blloku Fitness Club",
                 slug="premium-gym-demo",
                 description="Nationwide gym access.",
                 short_description="Gym access nationwide.",
@@ -152,7 +152,7 @@ async def seed() -> None:
             ),
             Perk(
                 provider_id=provider_a.id,
-                name="Urban Yoga Studio Pass",
+                name="Tirana Yoga Studio",
                 slug="yoga-pass-demo",
                 description="Monthly yoga classes.",
                 short_description="Yoga studio monthly pass.",
@@ -165,7 +165,7 @@ async def seed() -> None:
             ),
             Perk(
                 provider_id=provider_b.id,
-                name="Healthy Meal Delivery",
+                name="Albanian Organic Meals",
                 slug="meal-delivery-demo",
                 description="Weekly healthy meal kits.",
                 short_description="Healthy meal delivery credit.",
@@ -178,7 +178,7 @@ async def seed() -> None:
             ),
             Perk(
                 provider_id=provider_b.id,
-                name="City Bike Share",
+                name="Tirana Bike Share",
                 slug="bike-share-demo",
                 description="Annual bike share pass.",
                 short_description="Bike share annual pass.",
@@ -191,7 +191,7 @@ async def seed() -> None:
             ),
             Perk(
                 provider_id=provider_a.id,
-                name="Weekend Rail Getaway",
+                name="Durrës Weekend Getaway",
                 slug="rail-getaway-demo",
                 description="Discounted rail packages.",
                 short_description="Weekend rail travel package.",

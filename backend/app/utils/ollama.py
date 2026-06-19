@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import MutableMapping
 
 import httpx
 
+from sqlalchemy import select
+
 from app.config import Settings, get_settings
+from app.database import AsyncSessionLocal
+from app.models.employee import EmployeeProfile
+from app.services.websocket_gateway import get_websocket_gateway
 
 logger = logging.getLogger(__name__)
 
@@ -187,10 +193,40 @@ async def generate_and_store_explanation(
 ) -> None:
     """Background task that stores either the Ollama result or fallback text."""
 
-    EXPLANATION_STORE[employee_id] = await generate_or_fallback_explanation(
+    explanation = await generate_or_fallback_explanation(
         affinity_vector=affinity_vector,
         top_categories=top_categories,
         employee_name=employee_name,
         settings=settings,
+    )
+    EXPLANATION_STORE[employee_id] = explanation
+
+    try:
+        profile_uuid = uuid.UUID(employee_id)
+    except ValueError:
+        return
+
+    try:
+        async with AsyncSessionLocal() as db:
+            profile = await db.scalar(
+                select(EmployeeProfile).where(EmployeeProfile.id == profile_uuid)
+            )
+            if profile is None:
+                return
+            profile.welcome_explanation = explanation
+            await db.commit()
+    except Exception as exc:  # noqa: BLE001 - background task must not leak failures
+        logger.warning(
+            "Failed to persist welcome_explanation for employee %s: %s",
+            employee_id,
+            exc,
+        )
+        return
+
+    gateway = get_websocket_gateway()
+    await gateway.broadcast_to_employee(
+        employee_id,
+        "llm_ready",
+        {"employee_id": employee_id, "explanation_preview": explanation[:120]},
     )
 

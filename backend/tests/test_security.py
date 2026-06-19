@@ -15,7 +15,7 @@ from app.database import get_db
 from app.main import create_app
 from app.models.employee import EmployeeProfile
 from app.models.employer import EmployerOrganization
-from app.models.enums import PerkCategory, UserRole
+from app.models.enums import PerkCategory, ProviderStatus, UserRole
 from app.models.perk import Perk
 from app.models.provider import ProviderProfile
 from app.models.user import User
@@ -81,7 +81,13 @@ async def _create_verified_user(
             )
         )
     elif role == UserRole.provider:
-        db_session.add(ProviderProfile(user_id=user.id, company_name="FlowFit"))
+        db_session.add(
+            ProviderProfile(
+                user_id=user.id,
+                company_name="FlowFit",
+                status=ProviderStatus.active,
+            )
+        )
     elif role == UserRole.employee and employer is not None:
         db_session.add(
             EmployeeProfile(
@@ -158,7 +164,10 @@ async def test_rbac_admin_can_access_admin_stats(client: AsyncClient, db_session
         headers={"Authorization": f"Bearer {tokens['access_token']}"},
     )
     assert response.status_code == 200
-    assert response.json()["data"]["role"] == "admin"
+    data = response.json()["data"]
+    assert "users_total" in data
+    assert "providers_pending_review" in data
+    assert "pending_providers" in data
 
 
 @pytest.mark.asyncio

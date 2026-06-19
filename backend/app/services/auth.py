@@ -21,6 +21,7 @@ from app.models.provider import ProviderProfile
 from app.models.user import RefreshToken, User
 from app.schemas.auth import (
     LoginResponseData,
+    PushSubscriptionRequest,
     RefreshResponseData,
     RegisterRequest,
     RegisterResponseData,
@@ -289,3 +290,17 @@ async def logout_user(
     row = await _find_refresh_token(db, refresh_token)
     if row is not None and row.user_id == user.id:
         row.is_revoked = True
+
+
+async def register_push_subscription(
+    db: AsyncSession,
+    user: User,
+    body: PushSubscriptionRequest,
+) -> None:
+    """Persist Web Push subscription keys on the user record."""
+
+    user.push_endpoint = body.push_endpoint
+    user.push_p256dh = body.push_p256dh
+    user.push_auth = body.push_auth
+    await db.flush()
+

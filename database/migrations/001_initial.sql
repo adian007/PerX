@@ -399,7 +399,7 @@ DECLARE
     warm_threshold INTEGER;
 BEGIN
     -- Only count explicit signals, not passive views
-    IF NEW.interaction_type NOT IN ('select', 'reject', 'add_to_wishlist', 'redeemed') THEN
+    IF NEW.interaction_type NOT IN ('select', 'reject', 'add_to_wishlist', 'redeem') THEN
         RETURN NEW;
     END IF;
     
