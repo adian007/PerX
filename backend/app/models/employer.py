@@ -33,6 +33,7 @@ class EmployerOrganization(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     organization_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    invite_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
     vat_number: Mapped[Optional[str]] = mapped_column(String(50))
     logo_url: Mapped[Optional[str]] = mapped_column(Text)
     contact_name: Mapped[str] = mapped_column(String(255), nullable=False)

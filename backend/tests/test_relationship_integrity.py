@@ -35,14 +35,15 @@ async def test_multi_provider_package_payment_chain_and_rating_uniqueness(
 ) -> None:
     """Prove package→multi-provider chain, dual payments, and rating uniqueness."""
 
-    employer_user = await _create_user(db_session, f"employer-{uuid.uuid4()}@test.local", UserRole.employer)
-    employee_user = await _create_user(db_session, f"employee-{uuid.uuid4()}@test.local", UserRole.employee)
-    provider_a_user = await _create_user(db_session, f"provider-a-{uuid.uuid4()}@test.local", UserRole.provider)
-    provider_b_user = await _create_user(db_session, f"provider-b-{uuid.uuid4()}@test.local", UserRole.provider)
+    employer_user = await _create_user(db_session, f"employer-{uuid.uuid4()}@test.example.com", UserRole.employer)
+    employee_user = await _create_user(db_session, f"employee-{uuid.uuid4()}@test.example.com", UserRole.employee)
+    provider_a_user = await _create_user(db_session, f"provider-a-{uuid.uuid4()}@test.example.com", UserRole.provider)
+    provider_b_user = await _create_user(db_session, f"provider-b-{uuid.uuid4()}@test.example.com", UserRole.provider)
 
     employer = EmployerOrganization(
         user_id=employer_user.id,
         organization_name="Test Corp",
+        invite_code=f"TEST-{uuid.uuid4().hex[:6].upper()}",
         contact_name="HR Lead",
         default_currency_code="ALL",
     )

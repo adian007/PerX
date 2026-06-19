@@ -15,6 +15,16 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://perx_user:perx_secret@localhost:5432/perx",
         alias="DATABASE_URL",
     )
+    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+    redis_use_memory: bool = Field(default=False, alias="REDIS_USE_MEMORY")
+    jwt_secret: str = Field(default="change-me-in-dev-only", alias="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(default=15, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
+    cors_origins: list[str] = Field(
+        default=["http://localhost:5173", "http://127.0.0.1:5173"],
+        alias="CORS_ORIGINS",
+    )
     recommender_warm_threshold: int = Field(default=10, alias="RECOMMENDER_WARM_THRESHOLD")
     ollama_base_url: str = Field(
         default="http://host.docker.internal:11434",

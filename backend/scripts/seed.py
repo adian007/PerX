@@ -81,6 +81,7 @@ async def seed() -> None:
         employer = EmployerOrganization(
             user_id=employer_user.id,
             organization_name="Demo Corp Albania",
+            invite_code="ACME-DEMO",
             contact_name="HR Team",
             address_country="AL",
             default_monthly_budget_cents=50000,
