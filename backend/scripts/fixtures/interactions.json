@@ -1,0 +1,22 @@
+{
+  "employees": [
+    {"id": "employee-1"},
+    {"id": "employee-2"},
+    {"id": "employee-3"}
+  ],
+  "perks": [
+    {"id": "perk-fitness"},
+    {"id": "perk-wellness"},
+    {"id": "perk-food"},
+    {"id": "perk-travel"}
+  ],
+  "events": [
+    {"employee_idx": 0, "perk_idx": 0, "weight": 3.0},
+    {"employee_idx": 0, "perk_idx": 1, "weight": 2.0},
+    {"employee_idx": 0, "perk_idx": 0, "weight": 1.0},
+    {"employee_idx": 1, "perk_idx": 1, "weight": 4.0},
+    {"employee_idx": 1, "perk_idx": 2, "weight": 2.0},
+    {"employee_idx": 2, "perk_idx": 3, "weight": 5.0},
+    {"employee_idx": 2, "perk_idx": 0, "weight": 1.0}
+  ]
+}

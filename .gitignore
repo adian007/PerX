@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Environment & secrets
+.env
+.env.*
+
+# IDE / tooling
+.cursor/
+.vscode/
+*.swp
+
+# Generated outputs
+backend/scripts/output/
+
+# OS
+Thumbs.db
+.DS_Store

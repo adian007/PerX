@@ -1,0 +1,35 @@
+"""Application settings for the PerX backend."""
+
+from __future__ import annotations
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Runtime settings read from environment variables and optional .env file."""
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    database_url: str = Field(
+        default="postgresql+asyncpg://perx_user:perx_secret@localhost:5432/perx",
+        alias="DATABASE_URL",
+    )
+    recommender_warm_threshold: int = Field(default=10, alias="RECOMMENDER_WARM_THRESHOLD")
+    ollama_base_url: str = Field(
+        default="http://host.docker.internal:11434",
+        alias="OLLAMA_BASE_URL",
+    )
+    ollama_model: str = Field(default="gemma2:2b", alias="OLLAMA_MODEL")
+    ollama_timeout_seconds: float = Field(default=5.0, alias="OLLAMA_TIMEOUT_SECONDS")
+    ollama_force_fail: bool = Field(default=False, alias="OLLAMA_FORCE_FAIL")
+    ollama_max_retries: int = Field(default=0, alias="OLLAMA_MAX_RETRIES")
+
+
+def get_settings() -> Settings:
+    """Return settings read from the current environment."""
+
+    return Settings()
+
+
+settings = get_settings()
