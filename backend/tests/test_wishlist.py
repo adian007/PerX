@@ -237,6 +237,10 @@ async def test_add_inactive_perk(client: AsyncClient, db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_remove_from_wishlist(client: AsyncClient, db_session: AsyncSession):
     user, perk = await _seed_employee_with_perk(db_session)
+    employee = await db_session.scalar(
+        select(EmployeeProfile).where(EmployeeProfile.user_id == user.id)
+    )
+    assert employee is not None
     token = await _login(client, user.email)
 
     await client.post(
@@ -250,11 +254,14 @@ async def test_remove_from_wishlist(client: AsyncClient, db_session: AsyncSessio
     )
     assert delete_response.status_code == 204
 
-    rows = await db_session.scalars(select(EmployeeWishlist))
+    rows = await db_session.scalars(
+        select(EmployeeWishlist).where(EmployeeWishlist.employee_id == employee.id)
+    )
     assert len(list(rows.all())) == 0
 
     interaction_rows = await db_session.scalars(
         select(PerkInteraction).where(
+            PerkInteraction.employee_id == employee.id,
             PerkInteraction.interaction_type == InteractionType.remove_from_wishlist,
         )
     )

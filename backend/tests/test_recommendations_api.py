@@ -77,6 +77,7 @@ def test_ollama_health_endpoint(monkeypatch):
     monkeypatch.setenv("OLLAMA_FORCE_FAIL", "true")
     monkeypatch.setenv("ALLOW_DEMO_MODE", "true")
     monkeypatch.setenv("REDIS_USE_MEMORY", "true")
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
     client = TestClient(create_app())
 
     response = client.get("/api/v1/internal/ollama-health")
@@ -132,7 +133,7 @@ def test_ollama_down_recommendation_returns_with_fallback(monkeypatch):
 
     assert payload["total"] == 1
     assert payload["explanation_pending"] is True
-    assert "wellness" in payload["explanation"].lower()
+    assert "mirëqen" in payload["explanation"].lower()
 
     explanation = asyncio.run(
         generate_or_fallback_explanation(
@@ -141,7 +142,7 @@ def test_ollama_down_recommendation_returns_with_fallback(monkeypatch):
             employee_name="Ada",
         )
     )
-    assert "wellness" in explanation.lower()
+    assert "mirëqen" in explanation.lower()
 
 
 def test_recommendation_response_does_not_wait_on_llm(monkeypatch):

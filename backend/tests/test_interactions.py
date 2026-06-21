@@ -192,6 +192,10 @@ async def test_log_interaction_strict_validation(client: AsyncClient, db_session
 @pytest.mark.asyncio
 async def test_log_interactions_batch(client: AsyncClient, db_session: AsyncSession):
     user, perk = await _seed_employee_perk(db_session)
+    employee = await db_session.scalar(
+        select(EmployeeProfile).where(EmployeeProfile.user_id == user.id)
+    )
+    assert employee is not None
     token = await _login(client, user.email)
     occurred = datetime(2025, 6, 15, 10, 5, 0, tzinfo=timezone.utc).isoformat()
 
@@ -217,5 +221,7 @@ async def test_log_interactions_batch(client: AsyncClient, db_session: AsyncSess
     assert data["accepted"] == 1
     assert data["rejected"] == 1
 
-    rows = await db_session.scalars(select(PerkInteraction))
+    rows = await db_session.scalars(
+        select(PerkInteraction).where(PerkInteraction.employee_id == employee.id)
+    )
     assert len(list(rows.all())) == 1

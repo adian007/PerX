@@ -30,6 +30,7 @@ jobs:
       REDIS_USE_MEMORY: "true"
       ALLOW_DEMO_MODE: "true"
       JWT_SECRET: ci-test-secret
+      INTERNAL_API_KEY: ""
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

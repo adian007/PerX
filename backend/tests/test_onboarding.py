@@ -69,4 +69,4 @@ def test_onboarding_explanation_poll(monkeypatch):
     body = response.json()["data"]
     assert body["ready"] is True
     assert body["explanation"] is not None
-    assert "food" in body["explanation"].lower()
+    assert "ushqim" in body["explanation"].lower()

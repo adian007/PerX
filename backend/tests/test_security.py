@@ -337,7 +337,10 @@ async def test_register_sql_injection_probe_returns_422(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_login_blocks_unverified_email(client: AsyncClient, db_session: AsyncSession):
+async def test_login_blocks_unverified_email(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
+    monkeypatch.setenv("ALLOW_DEMO_MODE", "false")
     user = User(
         email=f"unverified-{uuid.uuid4()}@test.example.com",
         hashed_password=hash_password("Secret123"),
