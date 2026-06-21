@@ -5,9 +5,10 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import UserRole
+from app.schemas.validators import normalize_auth_email
 
 PASSWORD_MIN_LENGTH = 8
 EMPLOYER_CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,31}$")
@@ -18,10 +19,15 @@ class RegisterRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    email: EmailStr
+    email: str
     password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=128)
     role: UserRole
     employer_code: str | None = Field(default=None, max_length=32)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return normalize_auth_email(value)
 
     @field_validator("password")
     @classmethod
@@ -48,8 +54,13 @@ class LoginRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    email: EmailStr
+    email: str
     password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return normalize_auth_email(value)
 
 
 class RefreshRequest(BaseModel):
@@ -74,7 +85,7 @@ class AuthUserResponse(BaseModel):
     model_config = ConfigDict(strict=True)
 
     id: str
-    email: EmailStr
+    email: str
     role: UserRole
     onboarding_completed: bool = False
 

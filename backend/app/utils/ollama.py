@@ -25,37 +25,37 @@ def get_fallback_explanation(top_category: str, employee_name: str) -> str:
 
     fallbacks = {
         "fitness": (
-            f"We prioritized fitness benefits for you, {employee_name}, to support "
-            "an active, energized lifestyle."
+            f"Vendosëm përfitime fitness për ty, {employee_name}, "
+            "sepse ke treguar interes për aktivitet fizik."
         ),
         "wellness": (
-            f"Your benefits focus on wellness, {employee_name}, with options that "
-            "help you recharge and stay balanced."
+            f"Përfitimet e mirëqenies janë në krye për ty, {employee_name}, "
+            "me opsione për relaksim dhe balancë."
         ),
         "food": (
-            f"We highlighted food benefits for you, {employee_name}, from healthy "
-            "meal support to everyday dining perks."
+            f"Theksuam përfitimet e ushqimit për ty, {employee_name}, "
+            "nga subvencione ushqimi te partnerë dërgese."
         ),
         "travel": (
-            f"Travel perks take center stage in your recommendations, {employee_name}, "
-            "so you can explore more for less."
+            f"Përfitimet e udhëtimit dalin në krye për ty, {employee_name}, "
+            "që të udhëtosh më shumë me më pak kosto."
         ),
         "education": (
-            f"Learning opportunities are front and center for you, {employee_name}, "
-            "with benefits that help you grow your skills."
+            f"Mundësitë e mësimit janë në fokus për ty, {employee_name}, "
+            "me përfitime që ndihmojnë zhvillimin profesional."
         ),
         "transport": (
-            f"We prioritized transport benefits for you, {employee_name}, to make "
-            "commuting and local travel easier."
+            f"Vendosëm përfitime transporti për ty, {employee_name}, "
+            "për ta bërë komutimin dhe lëvizjen lokale më të lehtë."
         ),
         "childcare": (
-            f"Family-friendly benefits are prominent for you, {employee_name}, with "
-            "supportive childcare options near the top."
+            f"Përfitimet për familjen dalin në krye për ty, {employee_name}, "
+            "me opsione kujdesi për fëmijët."
         ),
     }
     return fallbacks.get(
         top_category,
-        f"Based on your profile, we prioritized {top_category} benefits for you.",
+        f"Sipas profilit tënd, {employee_name}, prioritet kanë përfitimet e kategorisë {top_category}.",
     )
 
 
@@ -82,8 +82,9 @@ An employee named {employee_name} has these benefit preferences (scored 0-1):
 
 Their top categories are: {', '.join(top_categories)}.
 
-Write a 2-3 sentence personalized explanation of why these benefit categories were chosen for them.
-Be warm, specific, and concise. Do not use generic phrases like "based on your data".
+Write a 2-3 sentence personalized explanation in Albanian (sq-AL) of why these benefit categories were chosen.
+Use informal "ti" form. Be specific and concise. Do not use em dashes.
+Do not use generic phrases like "based on your data".
 Focus on their lifestyle and what they will gain."""
 
     attempts = max(1, active_settings.ollama_max_retries + 1)
@@ -118,6 +119,76 @@ Focus on their lifestyle and what they will gain."""
                 exc,
             )
     return None
+
+
+async def generate_chat_reply(
+    message: str,
+    employee_name: str,
+    context: str,
+    history: list[tuple[str, str]] | None = None,
+    settings: Settings | None = None,
+) -> tuple[str, str, str]:
+    """Generate a chat reply via Ollama. Returns (reply, model, source)."""
+
+    active_settings = settings or get_settings()
+    model = active_settings.ollama_model
+
+    fallback = (
+        f"Hi {employee_name}. I can help with your budget and benefits. "
+        "Check recommendations on the home screen or ask about a specific category."
+    )
+
+    if active_settings.ollama_force_fail:
+        return fallback, model, "fallback"
+
+    history_block = ""
+    if history:
+        lines = []
+        for role, content in history[-6:]:
+            speaker = "Employee" if role == "user" else "PerX"
+            lines.append(f"{speaker}: {content}")
+        history_block = "Recent conversation:\n" + "\n".join(lines) + "\n\n"
+
+    prompt = f"""You are PerX, a professional employee benefits assistant.
+Use ONLY the context below and the recent conversation. If unsure, say so briefly and suggest checking the app.
+Always reply in English. No markdown. No em dashes. Keep answers to 2-4 sentences.
+
+Example:
+CONTEXT:
+Employee: Jane Doe
+Employer: Acme Corp
+Budget remaining: 12,500 ALL (ALL)
+Top recommendations: Yoga Pass (45 ALL/mo)
+
+Employee question: How much budget do I have left?
+
+PerX reply: Hi Jane, you have 12,500 ALL remaining in your benefits budget this month. You can use it toward perks like Yoga Pass from the home screen.
+
+{history_block}CONTEXT:
+{context}
+
+Employee question: {message}
+
+PerX reply:"""
+
+    try:
+        async with httpx.AsyncClient(timeout=active_settings.ollama_timeout_seconds) as client:
+            response = await client.post(
+                f"{active_settings.ollama_base_url}/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                },
+            )
+            response.raise_for_status()
+            content = response.json().get("response", "").strip()
+            if content:
+                return content, model, "ollama"
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Ollama chat failed: %s", exc)
+
+    return fallback, model, "fallback"
 
 
 async def check_ollama_health(

@@ -29,10 +29,19 @@ class LLMCallbackRequest(BaseModel):
 async def verify_internal_access(
     x_internal_key: Annotated[str | None, Header(alias="X-Internal-Key")] = None,
 ) -> None:
-    """Require internal API key in production; open in dev when unset."""
+    """Require internal API key when demo mode is off; open in dev when unset."""
 
     settings = get_settings()
     if settings.internal_api_key is None:
+        if not settings.allow_demo_mode:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "INTERNAL_API_DISABLED",
+                    "message": "Internal API is not configured",
+                    "details": {},
+                },
+            )
         return
     if x_internal_key != settings.internal_api_key:
         raise HTTPException(

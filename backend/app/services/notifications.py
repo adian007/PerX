@@ -13,6 +13,7 @@ from app.models.enums import NotificationType
 from app.models.notification import Notification
 from app.models.user import User
 from app.repositories.notification import (
+    count_user_notifications,
     create_notification,
     list_user_notifications,
     mark_all_notifications_read,
@@ -93,11 +94,12 @@ async def list_my_notifications(
     unread_only: bool = False,
     limit: int = 20,
     page: int = 1,
-) -> list[NotificationItem]:
-    """List notifications for the authenticated user."""
+) -> tuple[list[NotificationItem], int]:
+    """List notifications for the authenticated user with total count."""
 
     assert_role(user, {UserRole.employee, UserRole.employer, UserRole.provider, UserRole.admin})
     offset = (page - 1) * limit
+    total = await count_user_notifications(db, user.id, unread_only=unread_only)
     rows = await list_user_notifications(
         db,
         user.id,
@@ -105,7 +107,7 @@ async def list_my_notifications(
         limit=limit,
         offset=offset,
     )
-    return [
+    items = [
         NotificationItem(
             id=str(row.id),
             type=row.type.value,
@@ -117,6 +119,7 @@ async def list_my_notifications(
         )
         for row in rows
     ]
+    return items, total
 
 
 async def mark_one_read(

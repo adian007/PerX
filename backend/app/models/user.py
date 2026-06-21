@@ -16,6 +16,7 @@ from app.models.enums import UserRole
 if TYPE_CHECKING:
     from app.models.employee import EmployeeProfile
     from app.models.employer import EmployerOrganization
+    from app.models.gamification import EmployeeGamification
     from app.models.notification import Notification
     from app.models.package import Package
     from app.models.provider import ProviderProfile
@@ -65,6 +66,9 @@ class User(Base):
     selections_approved: Mapped[list["PerkSelection"]] = relationship(
         back_populates="approved_by_user", foreign_keys="PerkSelection.approved_by"
     )
+    gamification: Mapped[Optional["EmployeeGamification"]] = relationship(
+        back_populates="user", uselist=False
+    )
 
 
 class RefreshToken(Base):
@@ -79,6 +83,7 @@ class RefreshToken(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    lookup_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     is_revoked: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(

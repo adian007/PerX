@@ -29,6 +29,7 @@ from app.models.enums import InteractionType, PerkCategory
 
 if TYPE_CHECKING:
     from app.models.employee import EmployeeProfile, EmployeeWishlist
+    from app.models.gamification import EmployeeReview
     from app.models.package import PackageItem
     from app.models.provider import ProviderProfile, ProviderRating
     from app.models.selection import PerkSelection
@@ -89,6 +90,7 @@ class Perk(Base):
     wishlist_entries: Mapped[list["EmployeeWishlist"]] = relationship(back_populates="perk")
     package_items: Mapped[list["PackageItem"]] = relationship(back_populates="perk")
     ratings: Mapped[list["ProviderRating"]] = relationship(back_populates="perk")
+    employee_reviews: Mapped[list["EmployeeReview"]] = relationship(back_populates="perk")
 
 
 class PerkInteraction(Base):

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
+
+from app.schemas.validators import PerxEmailStr
 
 
 class EmployerSummary(BaseModel):
@@ -21,7 +23,7 @@ class EmployeeMeData(BaseModel):
     model_config = ConfigDict(strict=True)
 
     id: str
-    email: EmailStr
+    email: PerxEmailStr
     first_name: str
     last_name: str
     avatar_url: str | None = None

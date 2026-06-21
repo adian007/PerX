@@ -206,8 +206,8 @@ async def optimize_plan(
 
     included_count = len(result["approved_ids"])
     explanation = (
-        f"We selected {included_count} of {len(perks)} perks to maximize your benefit "
-        f"within the {_format_money(budget_available, allocation.currency_code, user.locale)} budget."
+        f"Zgjodhëm {included_count} nga {len(perks)} përfitime "
+        f"brenda buxhetit të {_format_money(budget_available, allocation.currency_code, user.locale)}."
     )
 
     wishlist_scores = {str(perk_id): score_map[perk_id] for perk_id in score_map}

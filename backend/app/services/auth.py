@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth.jwt import REVOKED_JTI_PREFIX, create_access_token
-from app.auth.passwords import hash_password, hash_token, verify_password, verify_token
+from app.auth.passwords import hash_password, hash_token, lookup_token_hash, verify_password, verify_token
 from app.config import get_settings
 from app.models.employee import EmployeeProfile
 from app.models.employer import EmployerOrganization
@@ -69,11 +69,12 @@ async def register_user(db: AsyncSession, body: RegisterRequest) -> RegisterResp
             },
         )
 
+    settings = get_settings()
     user = User(
         email=body.email,
         hashed_password=hash_password(body.password),
         role=body.role,
-        is_verified=False,
+        is_verified=settings.allow_demo_mode,
     )
     db.add(user)
     await db.flush()
@@ -131,6 +132,7 @@ async def _issue_tokens(db: AsyncSession, user: User) -> tuple[str, str, datetim
     refresh_row = RefreshToken(
         user_id=user.id,
         token_hash=hash_token(refresh_plain),
+        lookup_hash=lookup_token_hash(refresh_plain),
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
     )
     db.add(refresh_row)
@@ -168,14 +170,16 @@ async def login_user(db: AsyncSession, *, email: str, password: str) -> LoginRes
         )
 
     if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "code": "EMAIL_NOT_VERIFIED",
-                "message": "Verify your email to continue",
-                "details": {},
-            },
-        )
+        settings = get_settings()
+        if not settings.allow_demo_mode:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "EMAIL_NOT_VERIFIED",
+                    "message": "Verify your email to continue",
+                    "details": {},
+                },
+            )
 
     access_token, refresh_token, _ = await _issue_tokens(db, user)
     onboarding_completed = False
@@ -196,18 +200,20 @@ async def login_user(db: AsyncSession, *, email: str, password: str) -> LoginRes
 
 
 async def _find_refresh_token(db: AsyncSession, plain_token: str) -> RefreshToken | None:
-    """Locate a refresh token row by bcrypt hash comparison."""
+    """Locate a refresh token row via SHA-256 lookup, then verify bcrypt hash."""
 
-    rows = await db.scalars(
+    row = await db.scalar(
         select(RefreshToken).where(
+            RefreshToken.lookup_hash == lookup_token_hash(plain_token),
             RefreshToken.is_revoked.is_(False),
             RefreshToken.expires_at > datetime.now(timezone.utc),
         )
     )
-    for row in rows:
-        if verify_token(plain_token, row.token_hash):
-            return row
-    return None
+    if row is None:
+        return None
+    if not verify_token(plain_token, row.token_hash):
+        return None
+    return row
 
 
 async def refresh_tokens(db: AsyncSession, *, refresh_token: str) -> RefreshResponseData:

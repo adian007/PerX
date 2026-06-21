@@ -48,6 +48,7 @@ def perk_from_row(row: dict, provider_row: dict) -> Perk:
         short_description=row.get("short_description") or "",
         image_url=row.get("image_url"),
         employee_price_cents=int(row["employee_price_cents"]),
+        currency_code=str(row.get("currency_code") or "ALL"),
         provider=provider,
         tags=list(row.get("tags") or []),
         is_active=bool(row.get("is_active", True)),
@@ -92,6 +93,7 @@ def perk_from_orm(perk_row, provider_row=None) -> Perk:
         short_description=perk_row.short_description or "",
         image_url=perk_row.image_url,
         employee_price_cents=int(perk_row.employee_price_cents),
+        currency_code=str(getattr(perk_row, "currency_code", None) or "ALL"),
         provider=Provider(
             id=str(provider.id),
             company_name=provider.company_name,

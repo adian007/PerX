@@ -18,3 +18,30 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       ALLOW_DEMO_MODE: "true"
+      CV_ENABLED: ${CV_ENABLED:-true}
+      CV_SERVICE_URL: http://cv-service:8010
+    depends_on:
+      cv-service:
+        condition: service_healthy
+
+  cv-service:
+    ports:
+      - "8010:8010"
+
+  frontend:
+    profiles: ["dev-frontend"]
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    command: sh -c "npm ci && npm run dev:lan"
+
+volumes:
+  frontend_node_modules:

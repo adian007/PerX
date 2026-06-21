@@ -2,14 +2,14 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: perx_user
-      POSTGRES_PASSWORD: perx_secret
-      POSTGRES_DB: perx
+      POSTGRES_USER: ${POSTGRES_USER:-perx_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-perx_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-perx}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ../database/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U perx_user -d perx"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-perx_user} -d ${POSTGRES_DB:-perx}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -29,18 +29,24 @@ services:
     env_file:
       - ../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://perx_user:perx_secret@postgres:5432/perx
+      POSTGRES_HOST: postgres
       REDIS_URL: redis://redis:6379/0
-      RECONCILE_ENABLED: "true"
+      RECONCILE_ENABLED: ${RECONCILE_ENABLED:-true}
+      CV_ENABLED: ${CV_ENABLED:-true}
+      # Docker network URL — do not use localhost from .env inside containers
+      CV_SERVICE_URL: http://cv-service:8010
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      cv-service:
+        condition: service_healthy
     labels:
       - traefik.enable=true
       - traefik.http.routers.perx-api.rule=PathPrefix(`/api`)
       - traefik.http.routers.perx-api.entrypoints=web
+      - traefik.http.routers.perx-api.middlewares=security-headers@file
       - traefik.http.services.perx-api.loadbalancer.server.port=8000
 
   # Optional local LLM — pull model after startup: docker compose exec ollama ollama pull gemma2:2b
@@ -49,6 +55,32 @@ services:
     profiles: ["with-ollama"]
     volumes:
       - ollama_data:/root/.ollama
+
+  # CV microservice (built-in heuristics; Tesseract in image for OCR)
+  cv-service:
+    build:
+      context: ../cv-service
+      dockerfile: Dockerfile
+    environment:
+      CV_SERVICE_NAME: perx-cv-service
+      CV_MAX_PAYLOAD_BYTES: 5000000
+      CV_INTERNAL_KEY: ${CV_INTERNAL_KEY:-}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8010/health'')"',
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.perx-cv.rule=PathPrefix(`/cv`)
+      - traefik.http.routers.perx-cv.entrypoints=web
+      - traefik.http.routers.perx-cv.middlewares=perx-cv-strip@file,security-headers@file
+      - traefik.http.services.perx-cv.loadbalancer.server.port=8010
 
   traefik:
     image: traefik:v3.0

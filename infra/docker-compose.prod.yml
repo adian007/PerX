@@ -1,0 +1,152 @@
+# Production stack — frontend + backend + postgres + redis.
+# Demo mode via ALLOW_DEMO_MODE in .env (default false); restart policies, healthchecks, secrets from .env (see ../.env.example).
+#
+# Usage (from infra/):
+#   cp ../.env.example ../.env   # set JWT_SECRET, POSTGRES_PASSWORD, etc.
+#   docker compose --env-file ../.env -f docker-compose.prod.yml up --build -d
+#
+# Optional Traefik TLS / security headers:
+#   docker compose -f docker-compose.prod.yml --profile with-traefik up --build -d
+#
+# cv-service is included by default; set CV_ENABLED=false in .env to disable backend integration.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-perx}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-perx}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      # Backend derives DATABASE_URL from POSTGRES_* (URL-encoded); set host for Docker network.
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      ALLOW_DEMO_MODE: ${ALLOW_DEMO_MODE:-false}
+      RECONCILE_ENABLED: ${RECONCILE_ENABLED:-true}
+      CV_ENABLED: ${CV_ENABLED:-true}
+      CV_SERVICE_URL: http://cv-service:8010
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      cv-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/api/v1/health'')"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.perx-api.rule=PathPrefix(`/api`)
+      - traefik.http.routers.perx-api.entrypoints=web
+      - traefik.http.routers.perx-api.middlewares=security-headers@file
+      - traefik.http.services.perx-api.loadbalancer.server.port=8000
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.perx-web.rule=PathPrefix(`/`)
+      - traefik.http.routers.perx-web.entrypoints=web
+      - traefik.http.routers.perx-web.priority=1
+      - traefik.http.routers.perx-web.middlewares=security-headers@file
+      - traefik.http.services.perx-web.loadbalancer.server.port=80
+
+  cv-service:
+    build:
+      context: ../cv-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CV_SERVICE_NAME: perx-cv-service
+      CV_MAX_PAYLOAD_BYTES: 5000000
+      CV_INTERNAL_KEY: ${CV_INTERNAL_KEY:-}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8010/health'')"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    ports:
+      - "8010:8010"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.perx-cv.rule=PathPrefix(`/cv`)
+      - traefik.http.routers.perx-cv.entrypoints=web
+      - traefik.http.routers.perx-cv.middlewares=perx-cv-strip@file,security-headers@file
+      - traefik.http.services.perx-cv.loadbalancer.server.port=8010
+
+  traefik:
+    image: traefik:v3.0
+    profiles: ["with-traefik"]
+    restart: unless-stopped
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

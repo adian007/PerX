@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
+from app.auth.passwords import hash_password
 from app.database import AsyncSessionLocal
 from app.models.budget import BudgetAllocation
 from app.models.employee import EmployeeProfile
@@ -23,7 +24,54 @@ from app.models.provider import ProviderProfile
 from app.models.selection import PerkSelection
 from app.models.user import User
 
-SEED_EMPLOYER_EMAIL = "hr@demo.perx.local"
+SEED_EMPLOYER_EMAIL = "hr@example.com"
+SEED_DEMO_PASSWORD = "Demo1234"
+DEMO_INVITE_CODE = "ACME-DEMO"
+LEGACY_DEMO_EMAILS = (
+    "hr@demo.perx.local",
+    "john.cold@demo.perx.local",
+    "mira.warm@demo.perx.local",
+    "flowfit@demo.perx.local",
+    "greenbite@demo.perx.local",
+)
+
+
+async def repair_legacy_demo(session) -> None:
+    """Reset demo passwords, verify accounts, and normalize employer invite code."""
+
+    demo_hash = hash_password(SEED_DEMO_PASSWORD)
+    users = (
+        await session.scalars(
+            select(User).where(
+                User.email.in_(
+                    [
+                        SEED_EMPLOYER_EMAIL,
+                        "john.cold@example.com",
+                        "mira.warm@example.com",
+                        "flowfit@example.com",
+                        "greenbite@example.com",
+                        *LEGACY_DEMO_EMAILS,
+                    ]
+                )
+            )
+        )
+    ).all()
+
+    for user in users:
+        user.hashed_password = demo_hash
+        user.is_verified = True
+
+    employer = await session.scalar(
+        select(EmployerOrganization).order_by(EmployerOrganization.created_at.asc())
+    )
+    if employer is not None:
+        employer.invite_code = DEMO_INVITE_CODE
+
+    await session.commit()
+    print(
+        f"Demo repair complete: {len(users)} user(s) reset to Demo1234, "
+        f"employer code set to {DEMO_INVITE_CODE}."
+    )
 
 
 async def seed() -> None:
@@ -31,41 +79,50 @@ async def seed() -> None:
 
     async with AsyncSessionLocal() as session:
         existing = await session.scalar(
-            select(User.id).where(User.email == SEED_EMPLOYER_EMAIL)
+            select(User.id).where(
+                User.email.in_([SEED_EMPLOYER_EMAIL, LEGACY_DEMO_EMAILS[0]])
+            )
         )
         if existing is not None:
-            print("Seed data already present — skipping.")
+            await repair_legacy_demo(session)
             return
+
+        demo_hash = hash_password(SEED_DEMO_PASSWORD)
 
         employer_user = User(
             email=SEED_EMPLOYER_EMAIL,
-            hashed_password="seed-not-for-login",
+            hashed_password=demo_hash,
             role=UserRole.employer,
             locale="sq-AL",
+            is_verified=True,
         )
         employee_cold_user = User(
-            email="john.cold@demo.perx.local",
-            hashed_password="seed-not-for-login",
+            email="john.cold@example.com",
+            hashed_password=demo_hash,
             role=UserRole.employee,
             locale="sq-AL",
+            is_verified=True,
         )
         employee_warm_user = User(
-            email="mira.warm@demo.perx.local",
-            hashed_password="seed-not-for-login",
+            email="mira.warm@example.com",
+            hashed_password=demo_hash,
             role=UserRole.employee,
             locale="sq-AL",
+            is_verified=True,
         )
         provider_a_user = User(
-            email="flowfit@demo.perx.local",
-            hashed_password="seed-not-for-login",
+            email="flowfit@example.com",
+            hashed_password=demo_hash,
             role=UserRole.provider,
             locale="sq-AL",
+            is_verified=True,
         )
         provider_b_user = User(
-            email="greenbite@demo.perx.local",
-            hashed_password="seed-not-for-login",
+            email="greenbite@example.com",
+            hashed_password=demo_hash,
             role=UserRole.provider,
             locale="sq-AL",
+            is_verified=True,
         )
         session.add_all(
             [
@@ -81,7 +138,7 @@ async def seed() -> None:
         employer = EmployerOrganization(
             user_id=employer_user.id,
             organization_name="Demo Corp Albania",
-            invite_code="ACME-DEMO",
+            invite_code=DEMO_INVITE_CODE,
             contact_name="HR Team",
             address_country="AL",
             default_monthly_budget_cents=50000,
@@ -141,8 +198,8 @@ async def seed() -> None:
                 provider_id=provider_a.id,
                 name="Blloku Fitness Club",
                 slug="premium-gym-demo",
-                description="Nationwide gym access.",
-                short_description="Gym access nationwide.",
+                description="Qasje në palestra në të gjithë vendin.",
+                short_description="Qasje palestre në rrjet.",
                 category=PerkCategory.fitness,
                 employee_price_cents=3500,
                 provider_cost_cents=2800,
@@ -154,8 +211,8 @@ async def seed() -> None:
                 provider_id=provider_a.id,
                 name="Tirana Yoga Studio",
                 slug="yoga-pass-demo",
-                description="Monthly yoga classes.",
-                short_description="Yoga studio monthly pass.",
+                description="Klasa joga mujore.",
+                short_description="Abonim mujor studio joga.",
                 category=PerkCategory.wellness,
                 employee_price_cents=4500,
                 provider_cost_cents=3600,
@@ -167,8 +224,8 @@ async def seed() -> None:
                 provider_id=provider_b.id,
                 name="Albanian Organic Meals",
                 slug="meal-delivery-demo",
-                description="Weekly healthy meal kits.",
-                short_description="Healthy meal delivery credit.",
+                description="Paketa javore ushqimi të shëndetshëm.",
+                short_description="Kredi dërgese ushqimi të shëndetshëm.",
                 category=PerkCategory.food,
                 employee_price_cents=2000,
                 provider_cost_cents=1600,
@@ -180,8 +237,8 @@ async def seed() -> None:
                 provider_id=provider_b.id,
                 name="Tirana Bike Share",
                 slug="bike-share-demo",
-                description="Annual bike share pass.",
-                short_description="Bike share annual pass.",
+                description="Abonim vjetor biçikleta.",
+                short_description="Abonim vjetor biçikleta share.",
                 category=PerkCategory.transport,
                 employee_price_cents=1500,
                 provider_cost_cents=1200,
@@ -193,8 +250,8 @@ async def seed() -> None:
                 provider_id=provider_a.id,
                 name="Durrës Weekend Getaway",
                 slug="rail-getaway-demo",
-                description="Discounted rail packages.",
-                short_description="Weekend rail travel package.",
+                description="Paketa hekurudhore me zbritje.",
+                short_description="Paketë udhëtimi fundjavë me hekurudhë.",
                 category=PerkCategory.travel,
                 employee_price_cents=8000,
                 provider_cost_cents=6400,
@@ -211,7 +268,7 @@ async def seed() -> None:
         packages = [
             Package(
                 name="Wellness Starter",
-                description="Gym + healthy meals from two providers.",
+                description="Palestër + ushqim i shëndetshëm nga dy ofrues.",
                 category="wellness_bundle",
                 is_curated=True,
                 total_price_cents=5500,
@@ -219,7 +276,7 @@ async def seed() -> None:
             ),
             Package(
                 name="Active Commuter",
-                description="Gym membership and bike share for daily wellness.",
+                description="Abonim palestre dhe biçikleta për komutim ditor.",
                 category="fitness_bundle",
                 is_curated=True,
                 total_price_cents=5000,
@@ -227,7 +284,7 @@ async def seed() -> None:
             ),
             Package(
                 name="Tirana Explorer",
-                description="Travel getaway plus local transport perks.",
+                description="Udhëtim fundjavë plus përfitime transporti lokal.",
                 category="travel_bundle",
                 is_curated=True,
                 total_price_cents=9500,

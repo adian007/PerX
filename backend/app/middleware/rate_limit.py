@@ -17,9 +17,13 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 ENDPOINT_LIMITS: dict[str, int] = {
     "POST:/api/v1/auth/login": 5,
     "POST:/api/v1/auth/register": 3,
+    "POST:/api/v1/auth/refresh": 10,
     "GET:/api/v1/recommendations": 30,
     "POST:/api/v1/selections/quick-add": 10,
     "POST:/api/v1/selections/optimize-plan": 5,
+    "POST:/api/v1/vision/jobs": 10,
+    "GET:/api/v1/vision/jobs/{id}": 60,
+    "GET:/api/v1/vision/health": 30,
 }
 
 DEFAULT_LIMIT = 60
@@ -27,6 +31,7 @@ DEFAULT_LIMIT = 60
 AUTH_RATE_LIMIT_PATHS = {
     "/api/v1/auth/login",
     "/api/v1/auth/register",
+    "/api/v1/auth/refresh",
 }
 
 

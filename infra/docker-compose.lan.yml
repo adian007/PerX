@@ -1,0 +1,16 @@
+# LAN demo overlay — production nginx frontend on port 80 (/api proxied to backend).
+# Do NOT combine with docker-compose.dev.yml (dev Vite uses port 5173 and conflicts).
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.lan.yml up --build
+services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_started
+      cv-service:
+        condition: service_healthy

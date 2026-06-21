@@ -15,6 +15,23 @@ CATEGORY_WEIGHTS = {
     "yogi": {"wellness": 0.5, "fitness": 0.2},
 }
 
+CATEGORY_LABELS = {
+    "fitness": "fitness",
+    "wellness": "mirëqenie",
+    "food": "ushqim",
+    "travel": "udhëtim",
+    "transport": "transport",
+    "finance": "financë",
+    "education": "arsim",
+    "entertainment": "argëtim",
+    "childcare": "kujdes fëmijësh",
+}
+
+
+def category_label(category: str) -> str:
+    return CATEGORY_LABELS.get(category, category.replace("_", " "))
+
+
 WELLNESS_WEIGHT = 0.08
 
 
@@ -93,7 +110,7 @@ def score_cold_start_recommendations(
                 perk=perk,
                 recommendation_score=round(final_score, 6),
                 reason_code=f"AFFINITY_{perk.category.upper()}_HIGH",
-                reason_text=f"Matches your {perk.category} preferences",
+                reason_text=f"Përputhet me preferencat e tua për {category_label(perk.category)}",
                 is_affordable=is_affordable,
             )
         )

@@ -9,6 +9,7 @@ venv/
 # Environment & secrets
 .env
 .env.*
+!.env.example
 
 # IDE / tooling
 .cursor/
@@ -17,6 +18,7 @@ venv/
 
 # Generated outputs
 backend/scripts/output/
+infra/logs/
 
 # OS
 Thumbs.db

@@ -1,0 +1,30 @@
+# PerX CV model manifest — uncomment and adjust paths once real weights are uploaded.
+# See README.md for expected folder layout.
+#
+# version: 1
+# runtime: onnx  # onnx | torch | custom
+#
+# pipelines:
+#   lifestyle:
+#     weights: lifestyle/model.onnx
+#     labels: lifestyle/labels.txt
+#     input_size: [224, 224]
+#
+#   receipt:
+#     weights: receipt/model.onnx
+#     vocab: receipt/vocab.json
+#
+#   ocr:
+#     weights: ocr/model.onnx
+#     charset: ocr/charset.txt
+#
+#   catalog_tag:
+#     weights: catalog_tag/model.onnx
+#     tags: catalog_tag/tags.json
+#
+#   visual_search:
+#     encoder: visual_search/encoder.onnx
+#     index_dir: visual_search/index
+#     top_k: 10
+#
+# fixtures_dir: fixtures  # optional; enables pipeline fixture tests

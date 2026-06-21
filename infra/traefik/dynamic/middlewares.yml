@@ -15,6 +15,10 @@ http:
           X-Frame-Options: DENY
           Referrer-Policy: strict-origin-when-cross-origin
           Content-Security-Policy: "default-src 'self'"
+    perx-cv-strip:
+      stripPrefix:
+        prefixes:
+          - /cv
 
   routers:
     perx-api-secure:

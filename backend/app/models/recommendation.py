@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from app.utils.formatting import format_money
+
 RecommenderMode = Literal["cold_start", "warm"]
 
 CATEGORIES = [
@@ -41,6 +43,7 @@ class Perk:
     image_url: str | None
     employee_price_cents: int
     provider: Provider
+    currency_code: str = "ALL"
     tags: list[str] = field(default_factory=list)
     is_active: bool = True
     is_featured: bool = False
@@ -97,7 +100,11 @@ class ScoredRecommendation:
             "short_description": self.perk.short_description,
             "image_url": self.perk.image_url,
             "employee_price_cents": self.perk.employee_price_cents,
-            "employee_price_formatted": f"EUR {self.perk.employee_price_cents / 100:.2f}",
+            "employee_price_formatted": format_money(
+                self.perk.employee_price_cents,
+                currency_code=self.perk.currency_code,
+                locale="sq-AL",
+            ),
             "provider": {
                 "id": self.perk.provider.id,
                 "company_name": self.perk.provider.company_name,

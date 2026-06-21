@@ -57,11 +57,7 @@ async def my_wishlist(
     """Get the authenticated employee's wishlist."""
 
     items = await get_my_wishlist(db, current_user)
-    response = envelope(items)
-    response["meta"].update(
-        {"total": len(items), "page": 1, "per_page": len(items) or 1, "pages": 1}
-    )
-    return response
+    return envelope(items)
 
 
 @router.post(

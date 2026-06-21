@@ -35,7 +35,7 @@ async def list_notifications(
 ) -> dict:
     """List notifications for the authenticated user."""
 
-    items = await list_my_notifications(
+    items, total = await list_my_notifications(
         db,
         current_user,
         unread_only=unread_only,
@@ -43,9 +43,10 @@ async def list_notifications(
         page=page,
     )
     payload = [item.model_dump() for item in items]
+    pages = max(1, (total + per_page - 1) // per_page) if total else 1
     response = envelope(payload)
     response["meta"].update(
-        {"total": len(payload), "page": page, "per_page": per_page, "pages": 1}
+        {"total": total, "page": page, "per_page": per_page, "pages": pages}
     )
     return response
 

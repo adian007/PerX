@@ -59,7 +59,8 @@ def compute_warm_recommendations(
     """Compute warm-mode recommendations from independent score components.
 
     TODO: Prefer nightly precomputed scores from Redis (`recs:{employee_id}:scores`)
-    when that job exists. This function is the on-demand fallback path.
+    via ``RedisRecommendationCache`` when populated by the batch job. This function
+    is the on-demand fallback path when cache is cold or bypassed with ``refresh``.
     """
 
     scored: list[ScoredRecommendation] = []
@@ -84,7 +85,7 @@ def compute_warm_recommendations(
                 perk=perk,
                 recommendation_score=final_score,
                 reason_code="HYBRID",
-                reason_text="Combines your preferences, similar employee behavior, and discovery",
+                reason_text="Bazuar te preferencat e tua dhe çfarë zgjedhin punonjës të ngjashëm.",
                 is_affordable=is_affordable,
                 score_breakdown=ScoreBreakdown(
                     content_score=round(content_component, 6),

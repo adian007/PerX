@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import NotificationType
@@ -56,6 +56,21 @@ async def list_user_notifications(
 
     result = await db.scalars(stmt)
     return list(result.all())
+
+
+async def count_user_notifications(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    unread_only: bool = False,
+) -> int:
+    """Count notifications for a user."""
+
+    stmt = select(func.count()).select_from(Notification).where(Notification.user_id == user_id)
+    if unread_only:
+        stmt = stmt.where(Notification.is_read.is_(False))
+    total = await db.scalar(stmt)
+    return int(total or 0)
 
 
 async def get_notification_for_user(

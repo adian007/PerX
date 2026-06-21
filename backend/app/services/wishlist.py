@@ -19,6 +19,7 @@ from app.repositories.wishlist import (
 )
 from app.schemas.wishlist import WishlistAddResponseData
 from app.services.access_control import require_employee_profile
+from app.services.gamification import award_wishlist_add
 from app.services.perks import perk_for_employee
 
 
@@ -89,6 +90,7 @@ async def add_to_wishlist(
             interaction_type=InteractionType.add_to_wishlist,
         )
     )
+    await award_wishlist_add(db, user)
     await db.flush()
 
     return WishlistAddResponseData(added=True, perk_id=perk.id)

@@ -1,8 +1,11 @@
-"""Application settings for the PerX backend."""
+﻿"""Application settings for the PerX backend."""
 
 from __future__ import annotations
 
-from pydantic import Field
+from typing import Self
+from urllib.parse import quote_plus
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +18,10 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://perx_user:perx_secret@localhost:5432/perx",
         alias="DATABASE_URL",
     )
+    postgres_user: str | None = Field(default=None, alias="POSTGRES_USER")
+    postgres_password: str | None = Field(default=None, alias="POSTGRES_PASSWORD")
+    postgres_db: str | None = Field(default=None, alias="POSTGRES_DB")
+    postgres_host: str | None = Field(default=None, alias="POSTGRES_HOST")
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     redis_use_memory: bool = Field(default=False, alias="REDIS_USE_MEMORY")
     jwt_secret: str = Field(default="change-me-in-dev-only", alias="JWT_SECRET")
@@ -22,7 +29,16 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=15, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
     cors_origins: list[str] = Field(
-        default=["http://localhost:5173", "http://127.0.0.1:5173"],
+        default=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:5175",
+            "http://127.0.0.1:5176",
+        ],
         alias="CORS_ORIGINS",
     )
     recommender_warm_threshold: int = Field(default=10, alias="RECOMMENDER_WARM_THRESHOLD")
@@ -45,6 +61,30 @@ class Settings(BaseSettings):
     vapid_private_key: str | None = Field(default=None, alias="VAPID_PRIVATE_KEY")
     vapid_public_key: str | None = Field(default=None, alias="VAPID_PUBLIC_KEY")
     vapid_claims_email: str = Field(default="mailto:admin@perx.local", alias="VAPID_CLAIMS_EMAIL")
+    cv_enabled: bool = Field(
+        default=True,
+        alias="CV_ENABLED",
+        description="Set false in production if cv-service is unavailable.",
+    )
+    cv_service_url: str = Field(default="http://localhost:8010", alias="CV_SERVICE_URL")
+    cv_internal_key: str | None = Field(default=None, alias="CV_INTERNAL_KEY")
+    cv_max_image_bytes: int = Field(default=5_000_000, alias="CV_MAX_IMAGE_BYTES")
+    cv_result_ttl_seconds: int = Field(default=3600, alias="CV_RESULT_TTL_SECONDS")
+    cv_request_timeout_seconds: float = Field(default=8.0, alias="CV_REQUEST_TIMEOUT_SECONDS")
+
+    @model_validator(mode="after")
+    def assemble_database_url_from_postgres_env(self) -> Self:
+        """When POSTGRES_* is set, derive DATABASE_URL with proper password URL encoding."""
+
+        if self.postgres_user and self.postgres_password is not None:
+            host = self.postgres_host or "localhost"
+            db = self.postgres_db or "perx"
+            user = quote_plus(self.postgres_user)
+            password = quote_plus(self.postgres_password)
+            self.database_url = (
+                f"postgresql+asyncpg://{user}:{password}@{host}:5432/{db}"
+            )
+        return self
 
 
 def get_settings() -> Settings:

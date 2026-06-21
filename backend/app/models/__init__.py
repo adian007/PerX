@@ -2,6 +2,14 @@
 
 from app.models.budget import BudgetAllocation
 from app.models.employee import EmployeeProfile, EmployeeWishlist
+from app.models.gamification import (
+    Achievement,
+    EmployeeAchievement,
+    EmployeeGamification,
+    EmployeeReview,
+    JourneyProgress,
+    QuizScore,
+)
 from app.models.employer import EmployerOrganization
 from app.models.enums import (
     BudgetPeriod,
@@ -21,13 +29,20 @@ from app.models.perk import Perk, PerkInteraction
 from app.models.provider import ProviderProfile, ProviderRating
 from app.models.selection import PerkSelection
 from app.models.user import RefreshToken, User
+from app.models.vision import VisionJob
 
 __all__ = [
+    "Achievement",
     "BudgetAllocation",
     "BudgetPeriod",
+    "EmployeeAchievement",
+    "EmployeeGamification",
     "EmployeeProfile",
+    "EmployeeReview",
     "EmployeeWishlist",
     "EmployerOrganization",
+    "JourneyProgress",
+    "QuizScore",
     "InteractionType",
     "Notification",
     "NotificationType",
@@ -47,4 +62,5 @@ __all__ = [
     "SelectionStatus",
     "User",
     "UserRole",
+    "VisionJob",
 ]

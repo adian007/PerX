@@ -26,6 +26,7 @@ from app.services.budget import (
     atomic_decrement_budget,
     rollback_budget_decrement,
 )
+from app.services.gamification import award_quick_add
 from app.services.perks import perk_for_employee
 from app.utils.formatting import format_money
 from app.utils.redis import RedisClient
@@ -118,6 +119,8 @@ async def quick_add_selection(
     except Exception:
         await rollback_budget_decrement(redis, allocation, price)
         raise
+
+    await award_quick_add(db, user, category=perk.category.value)
 
     formatted = format_money(
         remaining,

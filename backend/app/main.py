@@ -16,8 +16,10 @@ from app.middleware.rate_limit import enforce_auth_rate_limit
 from app.routers import (
     admin,
     auth,
+    chat,
     employees,
     employers,
+    gamification,
     health,
     interactions,
     internal,
@@ -29,6 +31,7 @@ from app.routers import (
     recommendations,
     selections,
     websocket,
+    vision,
 )
 from app.services.budget_reconcile import run_reconcile_loop
 from app.utils.redis import close_redis, init_redis
@@ -42,6 +45,9 @@ async def lifespan(app: FastAPI):
 
     settings = get_settings()
     await init_redis()
+    from app.services.recommendation.cache import init_recommendation_cache
+
+    await init_recommendation_cache()
 
     reconcile_task: asyncio.Task | None = None
     in_pytest = os.getenv("PYTEST_CURRENT_TEST") is not None
@@ -83,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1", dependencies=[Depends(enforce_auth_rate_limit)])
     app.include_router(employees.router, prefix="/api/v1")
+    app.include_router(gamification.router, prefix="/api/v1")
     app.include_router(employers.router, prefix="/api/v1")
     app.include_router(providers.router, prefix="/api/v1")
     app.include_router(admin.router, prefix="/api/v1")
@@ -93,8 +100,10 @@ def create_app() -> FastAPI:
     app.include_router(packages.router, prefix="/api/v1")
     app.include_router(notifications.router, prefix="/api/v1")
     app.include_router(interactions.router, prefix="/api/v1")
+    app.include_router(chat.router, prefix="/api/v1")
     app.include_router(internal.router, prefix="/api/v1")
     app.include_router(websocket.router, prefix="/api/v1")
+    app.include_router(vision.router, prefix="/api/v1")
     return app
 
 

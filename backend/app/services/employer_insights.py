@@ -93,23 +93,23 @@ async def get_employer_insights(db: AsyncSession, user: User) -> EmployerInsight
     if top_categories:
         lead = top_categories[0].category.replace("_", " ")
         insight_summary = (
-            f"{lead.title()} is your team's most selected category this period "
-            f"with {top_categories[0].selection_count} selection(s). "
+            f"{lead.title()} është kategoria më e zgjedhur e ekipit këtë periudhë "
+            f"me {top_categories[0].selection_count} zgjedhje. "
         )
     else:
         insight_summary = (
-            "No perk selections yet — encourage your team to explore the marketplace. "
+            "Ende pa zgjedhje përfitimesh. Inkurajoni ekipin të shfletojë tregun. "
         )
 
     if pending_count > 0:
-        insight_summary += f"{pending_count} selection(s) awaiting your approval."
+        insight_summary += f"{pending_count} zgjedhje presin miratimin tuaj."
     elif utilization < 30 and total_allocated > 0:
         insight_summary += (
-            f"Only {utilization:.0f}% of budget is used — "
-            "consider promoting underused categories."
+            f"Vetëm {utilization:.0f}% e buxhetit është përdorur. "
+            "Promovoni kategoritë që mbeten të papërdorura."
         )
     else:
-        insight_summary += f"Budget utilization is at {utilization:.0f}%."
+        insight_summary += f"Përdorimi i buxhetit është {utilization:.0f}%."
 
     return EmployerInsightsData(
         period=period,
