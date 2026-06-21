@@ -85,6 +85,7 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
@@ -96,6 +97,7 @@ export default defineConfig({
     host: true,
     port: 4173,
     strictPort: true,
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:8000',

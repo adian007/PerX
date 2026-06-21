@@ -78,13 +78,25 @@ def create_app() -> FastAPI:
     app = FastAPI(title="PerX API", lifespan=lifespan)
     register_exception_handlers(app)
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Internal-Key"],
-    )
+    cors_kwargs: dict = {
+        "allow_origins": settings.cors_origins,
+        "allow_credentials": True,
+        "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type", "X-Request-ID", "X-Internal-Key"],
+    }
+    # Demo/dev: accept any private LAN IP or quick Cloudflare tunnel without editing CORS_ORIGINS.
+    if settings.allow_demo_mode:
+        cors_kwargs["allow_origin_regex"] = (
+            r"https?://("
+            r"localhost"
+            r"|127\.0\.0\.1"
+            r"|10\.\d+\.\d+\.\d+"
+            r"|192\.168\.\d+\.\d+"
+            r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+"
+            r"|[\w-]+\.trycloudflare\.com"
+            r")(?::\d+)?"
+        )
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1", dependencies=[Depends(enforce_auth_rate_limit)])
